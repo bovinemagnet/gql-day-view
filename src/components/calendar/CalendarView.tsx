@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client';
-import { GET_TODAYS_EVENTS } from '@/lib/graphql/client';
-import { CalendarEvent } from '@/types/calendar';
+import { GET_RESOURCE_TIMETABLES } from '@/lib/graphql/client';
+import { ResourceTimetable, TimeSlot } from '@/types/calendar';
 import { CalendarHeader } from './CalendarHeader';
 import { Timeline } from './Timeline';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,13 +9,28 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const CalendarView = () => {
-  const { data, loading, error, refetch } = useQuery(GET_TODAYS_EVENTS, {
+  const { data, loading, error, refetch } = useQuery(GET_RESOURCE_TIMETABLES, {
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: true,
   });
 
   const today = new Date();
-  const events: CalendarEvent[] = data?.getTodaysEvents || [];
+  const timetables: ResourceTimetable[] = data?.getResourceTimetables || [];
+  
+  // Transform timetable data into flat list of today's slots
+  const todaysSlots = timetables.flatMap(timetable => 
+    timetable.sessions.flatMap(session => 
+      session.slots.map(slot => ({
+        ...slot,
+        sessionName: session.name,
+        sessionDescription: session.description,
+        sessionType: session.sessionType,
+        campus: session.campus,
+        staffName: timetable.name,
+        timetableCode: timetable.code
+      }))
+    )
+  );
 
   if (loading) {
     return (
@@ -59,8 +74,8 @@ export const CalendarView = () => {
   return (
     <div className="min-h-screen bg-calendar-gradient">
       <div className="max-w-4xl mx-auto p-6">
-        <CalendarHeader date={today} eventsCount={events.length} />
-        <Timeline events={events} />
+        <CalendarHeader date={today} eventsCount={todaysSlots.length} />
+        <Timeline slots={todaysSlots} />
       </div>
     </div>
   );

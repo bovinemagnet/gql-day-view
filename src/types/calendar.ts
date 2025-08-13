@@ -1,15 +1,28 @@
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  description?: string;
+export interface TimeSlot {
   startTime: string;
   endTime: string;
-  attendees: string[];
-  location?: string;
-  category: 'meeting' | 'presentation' | 'review' | 'social' | 'planning';
+  duration: number;
+  dayOfWeek: string;
+  timeZone?: string;
 }
 
-export interface CalendarDay {
-  date: Date;
-  events: CalendarEvent[];
+export interface Session {
+  id: string;
+  name: string;
+  description?: string;
+  sessionType: string;
+  campus: string;
+  slots: TimeSlot[];
+}
+
+export interface ResourceTimetable {
+  timetableType: string;
+  code: string;
+  name: string;
+  description?: string;
+  sessions: Session[];
+}
+
+export interface TimetableData {
+  getResourceTimetables: ResourceTimetable[];
 }

@@ -1,15 +1,24 @@
-import { CalendarEvent } from '@/types/calendar';
+import { TimeSlot } from '@/types/calendar';
 import { EventCard } from './EventCard';
 import { Separator } from '@/components/ui/separator';
 
-interface TimelineProps {
-  events: CalendarEvent[];
+interface EnhancedSlot extends TimeSlot {
+  sessionName: string;
+  sessionDescription?: string;
+  sessionType: string;
+  campus: string;
+  staffName: string;
+  timetableCode: string;
 }
 
-export const Timeline = ({ events }: TimelineProps) => {
-  // Sort events by start time
-  const sortedEvents = [...events].sort((a, b) => 
-    a.startTime.localeCompare(b.startTime)
+interface TimelineProps {
+  slots: EnhancedSlot[];
+}
+
+export const Timeline = ({ slots }: TimelineProps) => {
+  // Sort slots by start time
+  const sortedSlots = [...slots].sort((a, b) => 
+    new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
 
   const getCurrentTime = () => {
@@ -18,8 +27,10 @@ export const Timeline = ({ events }: TimelineProps) => {
   };
 
   const isCurrentTime = (startTime: string, endTime: string) => {
-    const current = getCurrentTime();
-    return current >= startTime && current <= endTime;
+    const now = new Date();
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return now >= start && now <= end;
   };
 
   return (
@@ -29,11 +40,11 @@ export const Timeline = ({ events }: TimelineProps) => {
         <Separator className="flex-1" />
       </div>
 
-      {sortedEvents.length === 0 ? (
+      {sortedSlots.length === 0 ? (
         <div className="text-center py-12 bg-card rounded-xl shadow-calendar">
           <div className="text-6xl mb-4">📅</div>
           <h3 className="text-xl font-semibold text-foreground mb-2">
-            No events scheduled
+            No sessions scheduled
           </h3>
           <p className="text-calendar-time-text">
             Enjoy your free day! Time to focus on deep work.
@@ -41,14 +52,14 @@ export const Timeline = ({ events }: TimelineProps) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {sortedEvents.map((event, index) => (
-            <div key={event.id} className="relative">
+          {sortedSlots.map((slot, index) => (
+            <div key={`${slot.timetableCode}-${index}`} className="relative">
               {index > 0 && (
                 <div className="absolute left-0 top-0 w-1 h-4 bg-gradient-to-b from-calendar to-calendar-secondary transform -translate-y-4" />
               )}
               <EventCard 
-                event={event} 
-                isCurrentTime={isCurrentTime(event.startTime, event.endTime)}
+                slot={slot} 
+                isCurrentTime={isCurrentTime(slot.startTime, slot.endTime)}
               />
             </div>
           ))}

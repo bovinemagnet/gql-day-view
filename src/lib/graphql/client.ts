@@ -5,90 +5,102 @@ import { SchemaLink } from '@apollo/client/link/schema';
 
 // GraphQL schema definition
 const typeDefs = gql`
-  type CalendarEvent {
-    id: ID!
-    title: String!
-    description: String
+  type TimeSlot {
     startTime: String!
     endTime: String!
-    attendees: [String!]!
-    location: String
-    category: String!
+    duration: Int!
+    dayOfWeek: String!
+    timeZone: String
+  }
+
+  type Session {
+    id: ID!
+    name: String!
+    description: String
+    sessionType: String!
+    campus: String!
+    slots: [TimeSlot!]!
+  }
+
+  type ResourceTimetable {
+    timetableType: String!
+    code: String!
+    name: String!
+    description: String
+    sessions: [Session!]!
   }
 
   type Query {
-    getTodaysEvents: [CalendarEvent!]!
+    getResourceTimetables: [ResourceTimetable!]!
   }
 `;
 
 // Mock resolvers for demonstration
 const mocks = {
-  CalendarEvent: () => ({
-    id: () => Math.random().toString(36).substr(2, 9),
-    title: () => {
-      const titles = [
-        'Team Standup',
-        'Client Presentation',
-        'Design Review',
-        'Lunch Meeting',
-        'Code Review',
-        'Planning Session',
-        'One-on-One',
-        'Sprint Review',
-        'Product Demo',
-        'Strategy Call'
-      ];
-      return titles[Math.floor(Math.random() * titles.length)];
+  TimeSlot: () => ({
+    startTime: () => {
+      const today = new Date();
+      const hours = Math.floor(Math.random() * 10) + 8; // 8 AM to 6 PM
+      const minutes = Math.random() > 0.5 ? '00' : '30';
+      const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, parseInt(minutes));
+      return startDate.toISOString();
+    },
+    endTime: () => {
+      const today = new Date();
+      const hours = Math.floor(Math.random() * 10) + 9; // 9 AM to 7 PM
+      const minutes = Math.random() > 0.5 ? '00' : '30';
+      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, parseInt(minutes));
+      return endDate.toISOString();
+    },
+    duration: () => Math.floor(Math.random() * 3 + 1) * 60, // 60, 120, or 180 minutes
+    dayOfWeek: () => {
+      const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+      return days[new Date().getDay() - 1] || 'MONDAY';
+    },
+    timeZone: () => Math.random() > 0.5 ? 'Australia/Melbourne' : undefined
+  }),
+  Session: () => ({
+    id: () => Math.random().toString(36).substr(2, 6),
+    name: () => {
+      const names = ['01', '02', '03', 'Tutorial', 'Lab Session', 'Workshop'];
+      return names[Math.floor(Math.random() * names.length)];
     },
     description: () => {
       const descriptions = [
-        'Weekly team sync to discuss progress and blockers',
-        'Present the latest design concepts to stakeholders',
-        'Review UI/UX designs for the new feature',
-        'Informal discussion over lunch',
-        'Review code changes and ensure quality',
-        'Plan upcoming sprint activities',
-        'Personal development and feedback session',
-        'Demo completed features to the team',
-        'Showcase product to potential clients',
-        'Discuss long-term strategy and roadmap'
+        'Research Paper',
+        'Group Discussion',
+        'Practical Exercise',
+        'Theory Review',
+        'Assessment Task',
+        'Project Work'
       ];
       return descriptions[Math.floor(Math.random() * descriptions.length)];
     },
-    startTime: () => {
-      const hours = Math.floor(Math.random() * 12) + 8; // 8 AM to 8 PM
-      const minutes = Math.random() > 0.5 ? '00' : '30';
-      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+    sessionType: () => {
+      const types = ['Lecture', 'Tutorial', 'Lab', 'Workshop', 'Seminar'];
+      return types[Math.floor(Math.random() * types.length)];
     },
-    endTime: () => {
-      const hours = Math.floor(Math.random() * 12) + 9; // 9 AM to 9 PM
-      const minutes = Math.random() > 0.5 ? '00' : '30';
-      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+    campus: () => {
+      const campuses = ['On Campus', 'Online', 'Hybrid'];
+      return campuses[Math.floor(Math.random() * campuses.length)];
     },
-    attendees: () => {
-      const names = ['John Doe', 'Jane Smith', 'Bob Wilson', 'Alice Johnson', 'Charlie Brown'];
-      const count = Math.floor(Math.random() * 4) + 1;
-      return names.slice(0, count);
+    slots: () => new Array(Math.floor(Math.random() * 2) + 1) // 1-2 slots per session
+  }),
+  ResourceTimetable: () => ({
+    timetableType: () => {
+      const types = ['STAFF', 'STUDENT', 'ROOM'];
+      return types[Math.floor(Math.random() * types.length)];
     },
-    location: () => {
-      const locations = [
-        'Conference Room A',
-        'Zoom Meeting',
-        'Office Lobby',
-        'Meeting Room 2',
-        'Virtual',
-        'Cafeteria',
-        'Main Office'
-      ];
-      return locations[Math.floor(Math.random() * locations.length)];
+    code: () => Math.floor(Math.random() * 9000 + 1000).toString(),
+    name: () => {
+      const names = ['John Doe', 'Jane Smith', 'Dr. Wilson', 'Prof. Johnson', 'Sarah Brown'];
+      return names[Math.floor(Math.random() * names.length)];
     },
-    category: () => {
-      const categories = ['meeting', 'presentation', 'review', 'social', 'planning'];
-      return categories[Math.floor(Math.random() * categories.length)];
-    }
+    description: () => Math.random() > 0.7 ? 'Senior Lecturer' : null,
+    sessions: () => new Array(Math.floor(Math.random() * 4) + 2) // 2-5 sessions
   }),
   Query: () => ({
-    getTodaysEvents: () => new Array(Math.floor(Math.random() * 6) + 3) // 3-8 events
+    getResourceTimetables: () => new Array(Math.floor(Math.random() * 3) + 2) // 2-4 timetables
   })
 };
 
@@ -103,17 +115,27 @@ export const apolloClient = new ApolloClient({
 });
 
 // GraphQL queries
-export const GET_TODAYS_EVENTS = gql`
-  query GetTodaysEvents {
-    getTodaysEvents {
-      id
-      title
+export const GET_RESOURCE_TIMETABLES = gql`
+  query GetResourceTimetables {
+    getResourceTimetables {
+      timetableType
+      code
+      name
       description
-      startTime
-      endTime
-      attendees
-      location
-      category
+      sessions {
+        id
+        name
+        description
+        sessionType
+        campus
+        slots {
+          startTime
+          endTime
+          duration
+          dayOfWeek
+          timeZone
+        }
+      }
     }
   }
 `;

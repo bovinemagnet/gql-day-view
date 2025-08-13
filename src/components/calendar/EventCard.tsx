@@ -1,22 +1,36 @@
-import { CalendarEvent } from '@/types/calendar';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, Users } from 'lucide-react';
+import { Clock, MapPin, User, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+
+interface EnhancedSlot {
+  startTime: string;
+  endTime: string;
+  duration: number;
+  dayOfWeek: string;
+  timeZone?: string;
+  sessionName: string;
+  sessionDescription?: string;
+  sessionType: string;
+  campus: string;
+  staffName: string;
+  timetableCode: string;
+}
 
 interface EventCardProps {
-  event: CalendarEvent;
+  slot: EnhancedSlot;
   isCurrentTime?: boolean;
 }
 
-const categoryColors = {
-  meeting: 'bg-blue-100 text-blue-800 border-blue-200',
-  presentation: 'bg-purple-100 text-purple-800 border-purple-200',
-  review: 'bg-green-100 text-green-800 border-green-200',
-  social: 'bg-orange-100 text-orange-800 border-orange-200',
-  planning: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+const sessionTypeColors = {
+  Lecture: 'bg-blue-100 text-blue-800 border-blue-200',
+  Tutorial: 'bg-purple-100 text-purple-800 border-purple-200',
+  Lab: 'bg-green-100 text-green-800 border-green-200',
+  Workshop: 'bg-orange-100 text-orange-800 border-orange-200',
+  Seminar: 'bg-indigo-100 text-indigo-800 border-indigo-200',
 };
 
-export const EventCard = ({ event, isCurrentTime = false }: EventCardProps) => {
+export const EventCard = ({ slot, isCurrentTime = false }: EventCardProps) => {
   return (
     <div
       className={cn(
@@ -27,19 +41,19 @@ export const EventCard = ({ event, isCurrentTime = false }: EventCardProps) => {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h3 className="font-semibold text-foreground text-lg leading-tight">
-            {event.title}
+            {slot.sessionName} - {slot.sessionType}
           </h3>
-          {event.description && (
+          {slot.sessionDescription && (
             <p className="text-calendar-time-text text-sm mt-1 line-clamp-2">
-              {event.description}
+              {slot.sessionDescription}
             </p>
           )}
         </div>
         <Badge 
           variant="outline" 
-          className={cn("ml-3 capitalize", categoryColors[event.category])}
+          className={cn("ml-3 capitalize", sessionTypeColors[slot.sessionType as keyof typeof sessionTypeColors] || 'bg-gray-100 text-gray-800 border-gray-200')}
         >
-          {event.category}
+          {slot.sessionType}
         </Badge>
       </div>
 
@@ -47,24 +61,25 @@ export const EventCard = ({ event, isCurrentTime = false }: EventCardProps) => {
         <div className="flex items-center text-calendar-time-text text-sm">
           <Clock className="h-4 w-4 mr-2 text-calendar" />
           <span className="font-medium">
-            {event.startTime} - {event.endTime}
+            {format(new Date(slot.startTime), 'HH:mm')} - {format(new Date(slot.endTime), 'HH:mm')}
+            <span className="ml-2 text-xs opacity-75">({slot.duration} min)</span>
           </span>
         </div>
 
-        {event.location && (
-          <div className="flex items-center text-calendar-time-text text-sm">
-            <MapPin className="h-4 w-4 mr-2 text-calendar" />
-            <span>{event.location}</span>
-          </div>
-        )}
+        <div className="flex items-center text-calendar-time-text text-sm">
+          <MapPin className="h-4 w-4 mr-2 text-calendar" />
+          <span>{slot.campus}</span>
+        </div>
 
-        {event.attendees.length > 0 && (
+        <div className="flex items-center text-calendar-time-text text-sm">
+          <User className="h-4 w-4 mr-2 text-calendar" />
+          <span>{slot.staffName} ({slot.timetableCode})</span>
+        </div>
+
+        {slot.timeZone && (
           <div className="flex items-center text-calendar-time-text text-sm">
-            <Users className="h-4 w-4 mr-2 text-calendar" />
-            <span>
-              {event.attendees.slice(0, 2).join(', ')}
-              {event.attendees.length > 2 && ` +${event.attendees.length - 2} more`}
-            </span>
+            <BookOpen className="h-4 w-4 mr-2 text-calendar" />
+            <span className="text-xs opacity-75">{slot.timeZone}</span>
           </div>
         )}
       </div>
