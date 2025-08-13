@@ -52,6 +52,14 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				calendar: {
+					DEFAULT: 'hsl(var(--calendar-primary))',
+					light: 'hsl(var(--calendar-primary-light))',
+					secondary: 'hsl(var(--calendar-secondary))',
+					'time-text': 'hsl(var(--calendar-time-text))',
+					'event-bg': 'hsl(var(--calendar-event-bg))',
+					'event-border': 'hsl(var(--calendar-event-border))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -84,11 +92,38 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					from: {
+						opacity: '0'
+					},
+					to: {
+						opacity: '1'
+					}
+				},
+				'slide-up': {
+					from: {
+						transform: 'translateY(10px)',
+						opacity: '0'
+					},
+					to: {
+						transform: 'translateY(0)',
+						opacity: '1'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'slide-up': 'slide-up 0.4s ease-out'
+			},
+			backgroundImage: {
+				'calendar-gradient': 'var(--calendar-gradient)'
+			},
+			boxShadow: {
+				'calendar': 'var(--calendar-shadow)',
+				'calendar-lg': 'var(--calendar-shadow-lg)'
 			}
 		}
 	},
