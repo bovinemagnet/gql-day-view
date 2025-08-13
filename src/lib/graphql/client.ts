@@ -1,7 +1,9 @@
-import { ApolloClient, InMemoryCache, gql } from '@apollo/client';
+import { ApolloClient, InMemoryCache, gql, from } from '@apollo/client';
 import { addMocksToSchema } from '@graphql-tools/mock';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { SchemaLink } from '@apollo/client/link/schema';
+import { onError } from '@apollo/client/link/error';
+import { HttpLink } from '@apollo/client/link/http';
 
 // GraphQL schema definition
 const typeDefs = gql`
@@ -35,83 +37,101 @@ const typeDefs = gql`
   }
 `;
 
-// Mock resolvers for demonstration
-const mocks = {
-  TimeSlot: () => ({
-    startTime: () => {
-      const today = new Date();
-      const hours = Math.floor(Math.random() * 10) + 8; // 8 AM to 6 PM
-      const minutes = Math.random() > 0.5 ? '00' : '30';
-      const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, parseInt(minutes));
-      return startDate.toISOString();
+// Static mock data matching the provided example
+const mockData = {
+  getResourceTimetables: [
+    {
+      timetableType: "STAFF",
+      code: "1234",
+      name: "John Doe",
+      description: null,
+      sessions: [
+        {
+          id: "205130",
+          name: "01",
+          description: "Research Paper",
+          sessionType: "Lecture",
+          campus: "On Campus",
+          slots: [
+            {
+              startTime: "2020-02-26T14:30:00",
+              endTime: "2020-02-26T16:30:00",
+              duration: 120,
+              dayOfWeek: "WEDNESDAY",
+              timeZone: null
+            },
+            {
+              startTime: "2020-02-26T14:30:00",
+              endTime: "2020-02-26T16:30:00",
+              duration: 120,
+              dayOfWeek: "WEDNESDAY",
+              timeZone: "Australia/Melbourne"
+            }
+          ]
+        }
+      ]
     },
-    endTime: () => {
-      const today = new Date();
-      const hours = Math.floor(Math.random() * 10) + 9; // 9 AM to 7 PM
-      const minutes = Math.random() > 0.5 ? '00' : '30';
-      const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, parseInt(minutes));
-      return endDate.toISOString();
-    },
-    duration: () => Math.floor(Math.random() * 3 + 1) * 60, // 60, 120, or 180 minutes
-    dayOfWeek: () => {
-      const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-      return days[new Date().getDay() - 1] || 'MONDAY';
-    },
-    timeZone: () => Math.random() > 0.5 ? 'Australia/Melbourne' : undefined
-  }),
-  Session: () => ({
-    id: () => Math.random().toString(36).substr(2, 6),
-    name: () => {
-      const names = ['01', '02', '03', 'Tutorial', 'Lab Session', 'Workshop'];
-      return names[Math.floor(Math.random() * names.length)];
-    },
-    description: () => {
-      const descriptions = [
-        'Research Paper',
-        'Group Discussion',
-        'Practical Exercise',
-        'Theory Review',
-        'Assessment Task',
-        'Project Work'
-      ];
-      return descriptions[Math.floor(Math.random() * descriptions.length)];
-    },
-    sessionType: () => {
-      const types = ['Lecture', 'Tutorial', 'Lab', 'Workshop', 'Seminar'];
-      return types[Math.floor(Math.random() * types.length)];
-    },
-    campus: () => {
-      const campuses = ['On Campus', 'Online', 'Hybrid'];
-      return campuses[Math.floor(Math.random() * campuses.length)];
-    },
-    slots: () => new Array(Math.floor(Math.random() * 2) + 1) // 1-2 slots per session
-  }),
-  ResourceTimetable: () => ({
-    timetableType: () => {
-      const types = ['STAFF', 'STUDENT', 'ROOM'];
-      return types[Math.floor(Math.random() * types.length)];
-    },
-    code: () => Math.floor(Math.random() * 9000 + 1000).toString(),
-    name: () => {
-      const names = ['John Doe', 'Jane Smith', 'Dr. Wilson', 'Prof. Johnson', 'Sarah Brown'];
-      return names[Math.floor(Math.random() * names.length)];
-    },
-    description: () => Math.random() > 0.7 ? 'Senior Lecturer' : null,
-    sessions: () => new Array(Math.floor(Math.random() * 4) + 2) // 2-5 sessions
-  }),
-  Query: () => ({
-    getResourceTimetables: () => new Array(Math.floor(Math.random() * 3) + 2) // 2-4 timetables
-  })
+    {
+      timetableType: "STAFF",
+      code: "5678",
+      name: "Jane Smith",
+      description: "Senior Lecturer",
+      sessions: [
+        {
+          id: "205131",
+          name: "02",
+          description: "Group Discussion",
+          sessionType: "Tutorial",
+          campus: "Online",
+          slots: [
+            {
+              startTime: "2020-02-26T10:00:00",
+              endTime: "2020-02-26T11:30:00",
+              duration: 90,
+              dayOfWeek: "WEDNESDAY",
+              timeZone: "Australia/Melbourne"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 };
 
-// Create executable schema with mocks
-const schema = makeExecutableSchema({ typeDefs });
-const schemaWithMocks = addMocksToSchema({ schema, mocks });
+// Create mock resolvers that return the static data
+const mocks = {
+  Query: () => mockData
+};
 
-// Apollo Client with mock schema
+// Create executable schema with mocks for fallback
+const schema = makeExecutableSchema({ typeDefs });
+const schemaWithMocks = addMocksToSchema({ schema, mocks, preserveResolvers: true });
+
+// Try to connect to real GraphQL endpoint, fallback to mocks
+const httpLink = new HttpLink({
+  uri: process.env.GRAPHQL_ENDPOINT || '/graphql', // Replace with your actual endpoint
+});
+
+const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
+  if (networkError) {
+    console.warn('GraphQL endpoint unavailable, falling back to mock data');
+    // Return mock data on network error
+    return new SchemaLink({ schema: schemaWithMocks }).request(operation);
+  }
+});
+
+// Apollo Client with fallback to mock schema
 export const apolloClient = new ApolloClient({
-  link: new SchemaLink({ schema: schemaWithMocks }),
+  link: from([
+    errorLink,
+    httpLink
+  ]),
   cache: new InMemoryCache(),
+  defaultOptions: {
+    query: {
+      errorPolicy: 'all'
+    }
+  }
 });
 
 // GraphQL queries
